@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TempChat Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- Login Screen -->
+<div id="loginScreen" class="login-screen">
+    <div class="login-bg">
+        <div class="grid-overlay"></div>
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+    </div>
+    <div class="login-card">
+        <div class="login-logo">
+            <div class="logo-mark">
+                <i class="fas fa-terminal"></i>
+            </div>
+            <span class="logo-text">ADMIN<span class="accent">_</span>PANEL</span>
+            <p class="logo-sub">TempChat Control Center</p>
+        </div>
+        <div class="login-form">
+            <div class="field-group">
+                <label>ACCESS KEY</label>
+                <div class="input-wrap">
+                    <i class="fas fa-key"></i>
+                    <input type="password" id="passwordInput" placeholder="Enter admin password" />
+                    <button class="toggle-pw" id="togglePw"><i class="fas fa-eye"></i></button>
+                </div>
+            </div>
+            <div id="loginError" class="login-error hidden">
+                <i class="fas fa-exclamation-triangle"></i> Invalid credentials
+            </div>
+            <button id="loginBtn" class="login-btn">
+                <span>ACCESS SYSTEM</span>
+                <i class="fas fa-arrow-right"></i>
+            </button>
+        </div>
+        <p class="login-note">Default password: <code>admin123</code></p>
+    </div>
+</div>
+
+<!-- Main Admin Panel -->
+<div id="adminPanel" class="admin-panel hidden">
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="brand">
+                <div class="brand-icon"><i class="fas fa-terminal"></i></div>
+                <div class="brand-text">
+                    <span class="brand-name">TempChat</span>
+                    <span class="brand-role">Admin Panel</span>
+                </div>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="nav-section">
+                <span class="nav-label">OVERVIEW</span>
+                <a href="#" class="nav-item active" data-page="dashboard">
+                    <i class="fas fa-gauge-high"></i> Dashboard
+                </a>
+                <a href="#" class="nav-item" data-page="chats">
+                    <i class="fas fa-comments"></i> Active Chats
+                    <span class="nav-badge" id="activeChatsCount">0</span>
+                </a>
+            </div>
+            <div class="nav-section">
+                <span class="nav-label">MANAGEMENT</span>
+                <a href="#" class="nav-item" data-page="messages">
+                    <i class="fas fa-message"></i> Messages
+                </a>
+                <a href="#" class="nav-item" data-page="users">
+                    <i class="fas fa-users"></i> Participants
+                </a>
+            </div>
+            <div class="nav-section">
+                <span class="nav-label">TOOLS</span>
+                <a href="#" class="nav-item" data-page="cleanup">
+                    <i class="fas fa-broom"></i> Cleanup
+                </a>
+                <a href="#" class="nav-item" data-page="settings">
+                    <i class="fas fa-sliders"></i> Settings
+                </a>
+            </div>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="connection-pill" id="connectionPill">
+                <span class="conn-dot"></span>
+                <span id="connLabel">Connecting…</span>
+            </div>
+            <button class="logout-btn" id="logoutBtn">
+                <i class="fas fa-right-from-bracket"></i> Logout
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+        <!-- Top Bar -->
+        <header class="topbar">
+            <button class="sidebar-toggle" id="sidebarToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="topbar-title" id="pageTitle">Dashboard</div>
+            <div class="topbar-actions">
+                <button class="icon-action" id="refreshBtn" title="Refresh data">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+                <div class="topbar-time" id="topbarTime"></div>
+            </div>
+        </header>
+
+        <!-- Pages -->
+        <div class="pages">
+
+            <!-- DASHBOARD PAGE -->
+            <div class="page active" id="page-dashboard">
+                <div class="page-header">
+                    <h1>Dashboard</h1>
+                    <p>Real-time overview of TempChat activity</p>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card" id="stat-active">
+                        <div class="stat-icon green"><i class="fas fa-comments"></i></div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="statActiveChats">—</div>
+                            <div class="stat-label">Active Chats</div>
+                        </div>
+                        <div class="stat-trend" id="trendActive"></div>
+                    </div>
+                    <div class="stat-card" id="stat-users">
+                        <div class="stat-icon blue"><i class="fas fa-users"></i></div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="statTotalUsers">—</div>
+                            <div class="stat-label">Online Users</div>
+                        </div>
+                    </div>
+                    <div class="stat-card" id="stat-msgs">
+                        <div class="stat-icon purple"><i class="fas fa-message"></i></div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="statTotalMessages">—</div>
+                            <div class="stat-label">Total Messages</div>
+                        </div>
+                    </div>
+                    <div class="stat-card" id="stat-empty">
+                        <div class="stat-icon orange"><i class="fas fa-ghost"></i></div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="statEmptyChats">—</div>
+                            <div class="stat-label">Empty Chats</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dash-grid">
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h2><i class="fas fa-fire"></i> Most Active Chats</h2>
+                        </div>
+                        <div class="panel-body" id="topChatsList">
+                            <div class="loading-state"><i class="fas fa-spinner fa-spin"></i> Loading…</div>
+                        </div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h2><i class="fas fa-clock-rotate-left"></i> Recent Activity</h2>
+                        </div>
+                        <div class="panel-body" id="recentActivity">
+                            <div class="loading-state"><i class="fas fa-spinner fa-spin"></i> Loading…</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CHATS PAGE -->
+            <div class="page" id="page-chats">
+                <div class="page-header">
+                    <h1>Active Chats</h1>
+                    <p>Browse and manage all live chat sessions</p>
+                </div>
+                <div class="toolbar">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="chatSearch" placeholder="Search by Chat ID…" />
+                    </div>
+                    <button class="btn-danger-sm" id="deleteAllEmptyBtn">
+                        <i class="fas fa-trash"></i> Delete Empty Chats
+                    </button>
+                </div>
+                <div id="chatsList" class="table-wrapper">
+                    <div class="loading-state"><i class="fas fa-spinner fa-spin"></i> Loading chats…</div>
+                </div>
+            </div>
+
+            <!-- MESSAGES PAGE -->
+            <div class="page" id="page-messages">
+                <div class="page-header">
+                    <h1>Messages</h1>
+                    <p>Read and delete messages across all chats</p>
+                </div>
+                <div class="toolbar">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="msgSearch" placeholder="Search messages…" />
+                    </div>
+                    <select id="msgChatFilter" class="filter-select">
+                        <option value="">All Chats</option>
+                    </select>
+                </div>
+                <div id="messagesList" class="table-wrapper">
+                    <div class="loading-state"><i class="fas fa-spinner fa-spin"></i> Loading messages…</div>
+                </div>
+            </div>
+
+            <!-- USERS PAGE -->
+            <div class="page" id="page-users">
+                <div class="page-header">
+                    <h1>Participants</h1>
+                    <p>All active participants across all chats</p>
+                </div>
+                <div id="usersList" class="table-wrapper">
+                    <div class="loading-state"><i class="fas fa-spinner fa-spin"></i> Loading participants…</div>
+                </div>
+            </div>
+
+            <!-- CLEANUP PAGE -->
+            <div class="page" id="page-cleanup">
+                <div class="page-header">
+                    <h1>Database Cleanup</h1>
+                    <p>Manage and clean stale data from Firebase</p>
+                </div>
+                <div class="cleanup-grid">
+                    <div class="cleanup-card">
+                        <div class="cleanup-icon orange"><i class="fas fa-ghost"></i></div>
+                        <h3>Empty Chats</h3>
+                        <p>Remove chats with no participants and no messages.</p>
+                        <div class="cleanup-stat" id="cleanupEmptyCount">Scanning…</div>
+                        <button class="btn-action orange" id="cleanEmptyBtn">
+                            <i class="fas fa-trash-can"></i> Delete Empty Chats
+                        </button>
+                    </div>
+                    <div class="cleanup-card">
+                        <div class="cleanup-icon red"><i class="fas fa-bomb"></i></div>
+                        <h3>All Chats</h3>
+                        <p>Permanently delete all chat sessions and messages. Cannot be undone.</p>
+                        <div class="cleanup-stat" id="cleanupTotalCount">Scanning…</div>
+                        <button class="btn-action red" id="cleanAllBtn">
+                            <i class="fas fa-skull"></i> Nuke Everything
+                        </button>
+                    </div>
+                    <div class="cleanup-card">
+                        <div class="cleanup-icon blue"><i class="fas fa-database"></i></div>
+                        <h3>Export Data</h3>
+                        <p>Download all chat data as a JSON file for backup or analysis.</p>
+                        <div class="cleanup-stat">Ready to export</div>
+                        <button class="btn-action blue" id="exportBtn">
+                            <i class="fas fa-download"></i> Export JSON
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SETTINGS PAGE -->
+            <div class="page" id="page-settings">
+                <div class="page-header">
+                    <h1>Settings</h1>
+                    <p>Configure admin panel preferences</p>
+                </div>
+                <div class="settings-grid">
+                    <div class="settings-card">
+                        <h3><i class="fas fa-lock"></i> Change Password</h3>
+                        <div class="field-group">
+                            <label>Current Password</label>
+                            <input type="password" id="currentPw" placeholder="Current password" />
+                        </div>
+                        <div class="field-group">
+                            <label>New Password</label>
+                            <input type="password" id="newPw" placeholder="New password" />
+                        </div>
+                        <div class="field-group">
+                            <label>Confirm New Password</label>
+                            <input type="password" id="confirmPw" placeholder="Confirm password" />
+                        </div>
+                        <button class="btn-save" id="savePwBtn">
+                            <i class="fas fa-floppy-disk"></i> Save Password
+                        </button>
+                        <div id="pwMsg" class="pw-msg hidden"></div>
+                    </div>
+                    <div class="settings-card">
+                        <h3><i class="fas fa-database"></i> Firebase Config</h3>
+                        <div class="config-display">
+                            <div class="config-row"><span>Project ID</span><code>chat-2024-ff149</code></div>
+                            <div class="config-row"><span>Region</span><code>asia-southeast1</code></div>
+                            <div class="config-row"><span>Auth Domain</span><code>chat-2024-ff149.firebaseapp.com</code></div>
+                            <div class="config-row"><span>Status</span><span id="settingsConn" class="badge-conn">—</span></div>
+                        </div>
+                    </div>
+                    <div class="settings-card">
+                        <h3><i class="fas fa-eye"></i> Display Options</h3>
+                        <div class="toggle-row">
+                            <span>Auto-refresh data</span>
+                            <label class="toggle">
+                                <input type="checkbox" id="autoRefreshToggle" checked />
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="toggle-row">
+                            <span>Show empty chats</span>
+                            <label class="toggle">
+                                <input type="checkbox" id="showEmptyToggle" checked />
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="field-group mt">
+                            <label>Refresh Interval (seconds)</label>
+                            <input type="number" id="refreshInterval" value="30" min="5" max="300" />
+                        </div>
+                        <button class="btn-save" id="saveSettingsBtn">
+                            <i class="fas fa-floppy-disk"></i> Save Settings
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /pages -->
+    </main>
+</div>
+
+<!-- Chat Detail Modal -->
+<div class="modal-overlay hidden" id="chatModal">
+    <div class="modal-box large">
+        <div class="modal-head">
+            <div>
+                <h3 id="modalChatId">Chat Details</h3>
+                <p id="modalChatSub">Loading…</p>
+            </div>
+            <button class="modal-close" id="closeChatModal"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-tabs">
+            <button class="tab-btn active" data-tab="modal-msgs">Messages</button>
+            <button class="tab-btn" data-tab="modal-parts">Participants</button>
+        </div>
+        <div class="tab-content active" id="modal-msgs">
+            <div id="modalMessages" class="modal-scroll"></div>
+        </div>
+        <div class="tab-content" id="modal-parts">
+            <div id="modalParticipants" class="modal-scroll"></div>
+        </div>
+        <div class="modal-foot">
+            <button class="btn-modal-danger" id="deleteChatBtn">
+                <i class="fas fa-trash"></i> Delete This Chat
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal-overlay hidden" id="confirmModal">
+    <div class="modal-box small">
+        <div class="modal-head">
+            <h3 id="confirmTitle">Confirm Action</h3>
+            <button class="modal-close" id="closeConfirmModal"><i class="fas fa-times"></i></button>
+        </div>
+        <p id="confirmMessage" class="confirm-msg"></p>
+        <div class="confirm-actions">
+            <button class="btn-cancel" id="confirmCancel">Cancel</button>
+            <button class="btn-confirm-danger" id="confirmOk">Delete</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast hidden">
+    <i class="fas fa-check-circle"></i>
+    <span id="toastMsg"></span>
+</div>
+
+<script src="admin.js"></script>
+</body>
+</html>
